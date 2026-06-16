@@ -1,16 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-
 a = Analysis(
     ['auto_cutdown_tool.py'],
     pathex=[],
-    binaries=[],
+    binaries=[('ffmpeg.exe', '.'), ('ffprobe.exe', '.')],
     datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['numpy', 'pandas', 'matplotlib', 'PIL', 'scipy', 'moviepy', 'imageio', 'imageio_ffmpeg', 'setuptools', 'distutils'],
     noarchive=False,
     optimize=0,
 )
@@ -19,26 +18,20 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
     name='auto_cutdown_tool',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='auto_cutdown_tool',
 )

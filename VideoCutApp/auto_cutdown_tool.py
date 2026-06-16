@@ -45,11 +45,16 @@ def parse_time(time_value):
 
 def get_ffmpeg_path():
     if getattr(sys, "frozen", False):
-        base_path = os.path.dirname(sys.executable)
+        # PyInstaller bundles files in sys._MEIPASS (like the _internal folder)
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
+        ffmpeg_path = os.path.join(base_path, "ffmpeg.exe")
+        if os.path.exists(ffmpeg_path):
+            return ffmpeg_path
+        # Fallback to next to the executable
+        return os.path.join(os.path.dirname(sys.executable), "ffmpeg.exe")
     else:
         base_path = os.path.dirname(__file__)
-
-    return os.path.join(base_path, "ffmpeg.exe")
+        return os.path.join(base_path, "ffmpeg.exe")
 
 
 def open_folder(path):
@@ -415,7 +420,31 @@ class VideoCutterApp:
                     )
 
                     if result.returncode != 0:
-                        raise RuntimeError(result.stderr.strip() or "FFmpeg failed.")
+                        # Fallback to transcoding (re-encoding) if stream copy fails
+                        # (e.g. incompatible codecs like ProRes to MP4 container)
+                        self.message_queue.put((
+                            "log",
+                            f"[Row {row_number}] Fast copy failed (incompatible codecs). Falling back to transcoding..."
+                        ))
+                        fallback_command = [
+                            ffmpeg_path,
+                            "-y",
+                            "-ss", str(start),
+                            "-i", video_file,
+                            "-t", str(duration),
+                            "-c:v", "libx264",
+                            "-c:a", "aac",
+                            "-pix_fmt", "yuv420p",
+                            out_filepath
+                        ]
+                        result = subprocess.run(
+                            fallback_command,
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.PIPE,
+                            text=True
+                        )
+                        if result.returncode != 0:
+                            raise RuntimeError(result.stderr.strip() or "FFmpeg transcoding failed.")
                 
                     success_count += 1
                     self.message_queue.put((
@@ -424,6 +453,11 @@ class VideoCutterApp:
                     ))
 
                 except Exception as e:
+                    if os.path.exists(out_filepath):
+                        try:
+                            os.remove(out_filepath)
+                        except Exception:
+                            pass
                     error_count += 1
                     error_message = f"[Row {row_number}] Error: {e}"
                     error_messages.append(error_message)
