@@ -1,0 +1,28 @@
+# Executables
+ffmpeg.exe
+ffprobe.exe
+
+# Build artifacts
+build/
+dist/
+
+# Output
+output*/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
